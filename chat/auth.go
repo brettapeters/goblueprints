@@ -8,8 +8,34 @@ import (
 	"strings"
 
 	"github.com/stretchr/gomniauth"
+	"github.com/stretchr/gomniauth/common"
 	"github.com/stretchr/objx"
 )
+
+// ChatUser exposes information needed for Avatar implementations
+type ChatUser interface {
+	UniqueID() string
+	AvatarURL() string
+}
+
+type chatUser struct {
+	common.User
+	uniqueID string
+}
+
+func (u chatUser) UniqueID() string {
+	return u.uniqueID
+}
+
+func newChatUser(u common.User) *chatUser {
+	m := md5.New()
+	io.WriteString(m, strings.ToLower(u.Email()))
+
+	return &chatUser{
+		User:     u,
+		uniqueID: fmt.Sprintf("%x", m.Sum(nil)),
+	}
+}
 
 type authHandler struct {
 	next http.Handler
@@ -82,15 +108,18 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		m := md5.New()
-		io.WriteString(m, strings.ToLower(user.Email()))
-		userID := fmt.Sprintf("%x", m.Sum(nil))
+		chatUser := newChatUser(user)
+		avatarURL, err := avatars.GetAvatarURL(chatUser)
+		if err != nil {
+			http.Error(w, fmt.Sprint("Error when trying to GetAvatarURL - ", err), http.StatusInternalServerError)
+			return
+		}
 
 		// save some data
 		authCookieValue := objx.New(map[string]interface{}{
-			"userid":     userID,
-			"name":       user.Name(),
-			"avatar_url": user.AvatarURL(),
+			"userid":     chatUser.UniqueID(),
+			"name":       chatUser.Name(),
+			"avatar_url": avatarURL,
 		}).MustBase64()
 		http.SetCookie(w, &http.Cookie{
 			Name:  "auth",

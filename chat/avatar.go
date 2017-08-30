@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
 )
 
 // ErrNoAvatarURL is the error that is returned when the
@@ -15,7 +18,22 @@ type Avatar interface {
 	// or returns an error if something goes wrong.
 	// ErrNoAvatarURL is returned if the object is unable to get
 	// a URL for the specified client.
-	GetAvatarURL(c *client) (string, error)
+	GetAvatarURL(ChatUser) (string, error)
+}
+
+// TryAvatars combines all Avatar implementations
+// and returns a value when one is found
+type TryAvatars []Avatar
+
+// GetAvatarURL loops over a slice of Avatar objects and
+// returns an avatar url when one is found
+func (a TryAvatars) GetAvatarURL(u ChatUser) (string, error) {
+	for _, avatar := range a {
+		if url, err := avatar.GetAvatarURL(u); err == nil {
+			return url, nil
+		}
+	}
+	return "", ErrNoAvatarURL
 }
 
 // AuthAvatar implements Avatar using the avatar url
@@ -27,13 +45,11 @@ var UseAuthAvatar AuthAvatar
 
 // GetAvatarURL returns the avatar_url from the
 // client userData map, or an error if none is found
-func (AuthAvatar) GetAvatarURL(c *client) (string, error) {
-	if url, ok := c.userData["avatar_url"]; ok {
-		if urlStr, ok := url.(string); ok {
-			return urlStr, nil
-		}
+func (AuthAvatar) GetAvatarURL(u ChatUser) (string, error) {
+	if len(u.AvatarURL()) == 0 {
+		return "", ErrNoAvatarURL
 	}
-	return "", ErrNoAvatarURL
+	return u.AvatarURL(), nil
 }
 
 // GravatarAvatar implements Avatar using the Gravatar service
@@ -43,13 +59,11 @@ type GravatarAvatar struct{}
 var UseGravatar GravatarAvatar
 
 // GetAvatarURL returns a Gravatar url for the passed client
-func (GravatarAvatar) GetAvatarURL(c *client) (string, error) {
-	if userid, ok := c.userData["userid"]; ok {
-		if useridStr, ok := userid.(string); ok {
-			return "//www.gravatar.com/avatar/" + useridStr, nil
-		}
+func (GravatarAvatar) GetAvatarURL(u ChatUser) (string, error) {
+	if len(u.UniqueID()) == 0 {
+		return "", ErrNoAvatarURL
 	}
-	return "", ErrNoAvatarURL
+	return "//www.gravatar.com/avatar/" + u.UniqueID(), nil
 }
 
 // FileSystemAvatar implements Avatar using image files
@@ -60,10 +74,21 @@ type FileSystemAvatar struct{}
 var UseFileSystemAvatar FileSystemAvatar
 
 // GetAvatarURL returns the path to an image file for a passed client
-func (FileSystemAvatar) GetAvatarURL(c *client) (string, error) {
-	if userid, ok := c.userData["userid"]; ok {
-		if useridStr, ok := userid.(string); ok {
-			return "/avatars/" + useridStr + ".jpg", nil
+func (FileSystemAvatar) GetAvatarURL(u ChatUser) (string, error) {
+	if len(u.UniqueID()) == 0 {
+		return "", ErrNoAvatarURL
+	}
+	files, err := ioutil.ReadDir("avatars")
+	if err != nil {
+		return "", ErrNoAvatarURL
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		fname := file.Name()
+		if u.UniqueID() == strings.TrimSuffix(fname, filepath.Ext(fname)) {
+			return "avatars/" + fname, nil
 		}
 	}
 	return "", ErrNoAvatarURL

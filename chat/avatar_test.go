@@ -4,45 +4,47 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	gomniauthtest "github.com/stretchr/gomniauth/test"
 )
 
 func TestAuthAvatar(t *testing.T) {
 	var authAvatar AuthAvatar
-	client := &client{}
+	testUser := &gomniauthtest.TestUser{}
+	testUser.On("AvatarURL").Return("", ErrNoAvatarURL)
+	testChatUser := &chatUser{User: testUser}
 
 	// no avatar value, should throw an error
-	url, err := authAvatar.GetAvatarURL(client)
-	if g, w := err, ErrNoAvatarURL; g != w {
-		t.Errorf("\nAuthAvatar.GetAvatarURL returned: %v\nWant %v", g, w)
+	url, err := authAvatar.GetAvatarURL(testChatUser)
+	if err != ErrNoAvatarURL {
+		t.Error("AuthAvatar.GetAvatarURL should return ErrNoAvatarURL when no value present")
 	}
 
 	// set a value
-	testURL := "http://url-to-gravatar/"
-	client.userData = map[string]interface{}{"avatar_url": testURL}
-	url, err = authAvatar.GetAvatarURL(client)
+	testURL := "http://url-to-avatar"
+	testUser = &gomniauthtest.TestUser{}
+	testChatUser.User = testUser
+	testUser.On("AvatarURL").Return(testURL, nil)
+	url, err = authAvatar.GetAvatarURL(testChatUser)
 	if err != nil {
 		t.Error("AuthAvatar.GetAvatarURL should return no error when value present")
-	} else {
-		if g, w := url, testURL; g != w {
-			t.Errorf("\nAuthAvatar.GetAvatarURL returned: %v\nWant %v", g, w)
-		}
+	}
+
+	if g, w := url, testURL; g != w {
+		t.Errorf("\nAuthAvatar.GetAvatarURL returned: %v\nWant %v", g, w)
 	}
 }
 
 func TestGravatarAvatar(t *testing.T) {
 	var gravatarAvatar GravatarAvatar
-	client := &client{}
-	client.userData = map[string]interface{}{
-		"userid": "0bc83cb571cd1c50ba6f3e8a78ef1346",
-	}
-
-	url, err := gravatarAvatar.GetAvatarURL(client)
+	user := &chatUser{uniqueID: "abc123"}
+	url, err := gravatarAvatar.GetAvatarURL(user)
 	if err != nil {
 		t.Error("GravatarAvatar.GetAvatarURL should not return an error")
 	}
 
-	if g, w := url, "//www.gravatar.com/avatar/0bc83cb571cd1c50ba6f3e8a78ef1346"; g != w {
-		t.Errorf("\nGravatarAvatar.GetAvatarURL returned: %v\nWant %v", g, w)
+	if g, w := url, "//www.gravatar.com/avatar/abc123"; g != w {
+		t.Errorf("\nGravatarAvitar.GetAvatarURL returned %s\nWant %s", g, w)
 	}
 }
 
@@ -53,10 +55,9 @@ func TestFileSystemAvatar(t *testing.T) {
 	defer close()
 
 	var fileSystemAvatar FileSystemAvatar
-	client := &client{}
-	client.userData = map[string]interface{}{"userid": userID}
+	user := &chatUser{uniqueID: userID}
 
-	url, err := fileSystemAvatar.GetAvatarURL(client)
+	url, err := fileSystemAvatar.GetAvatarURL(user)
 	if err != nil {
 		t.Error("FileSystemAvatar.GetAvatarURL should not return an error")
 	}
@@ -67,7 +68,7 @@ func TestFileSystemAvatar(t *testing.T) {
 }
 
 func tmpAvatarFile(userID string) (string, func()) {
-	filepath := "/avatars/" + userID + ".jpg"
+	filepath := "avatars/" + userID + ".jpg"
 	ioutil.WriteFile(filepath, []byte{}, 0777)
 	return filepath, func() { os.Remove(filepath) }
 }
