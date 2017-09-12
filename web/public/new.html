@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">  
+  <title>Create Poll</title>
+</head>
+<body>
+  <div class="container">
+    <form role="form" id="poll" class="col-md-4 offset-md-4">
+      <h2>Create Poll</h2>
+      <div class="form-group">
+        <label for="title">Title</label>
+        <input type="text" class="form-control" id="title" placeholder="Title">
+        <label for="options">Options</label>
+        <input type="text" class="form-control" id="options" placeholder="Options">
+        <p class="help-block">Comma separated</p>
+      </div>
+      <button type="submit" class="btn btn-primary">Create Poll</button> or <a href="/">cancel</a>
+    </form>
+  </div>
+  <script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+  <script>
+    $(function() {
+      var form = $('form#poll');
+      form.submit(function(e) {
+        e.preventDefault();
+
+        var title = form.find('input[id="title"]').val();
+        var options = form.find('input[id="options"]').val();
+        options = options.split(',');
+        
+        for (var opt in options) {
+          options[opt] = options[opt].trim();
+        }
+
+        $.post('http://localhost:8080/polls/?key=abc123',
+          JSON.stringify({
+            title: title,
+            options: options
+          })
+        ).done(function(d, s, r) {
+          location.href = 'view.html?poll=' + r.getResponseHeader('Location');
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">  
+  <title>View Poll</title>
+</head>
+<body>
+  <div class="container">
+    <div class="col-md-4 offset-md-4">
+      <h1 data-field="title">...</h1>
+      <ul id="options"></ul>
+      <div id="chart"></div>
+      <div>
+        <button class="btn btn-sm" id="delete">Delete this poll</button>
+      </div>
+    </div>
+  </div>
+  <script src="//www.google.com/jsapi"></script>
+  <script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+  <script>
+    google.load('visualization', '1.0', {'packages':['corechart']});
+    google.setOnLoadCallback(function() {
+      $(function() {
+        var chart;
+        var poll = location.href.split("poll=")[1];
+        var update = function() {
+          $.getJSON('http://localhost:8080/' + poll + '?key=abc123')
+            .done(function(polls) {
+              var poll = polls[0];
+              $('[data-field="title"]').text(poll.title);
+              $('#options').empty();
+              for (var opt in poll.results) {
+                $('#options').append(
+                  $('<li>').append(
+                    $('<small>').addClass('label label-default').text(poll.results[opt]),
+                    ' ', opt
+                  )
+                )
+              }
+              if (poll.results) {
+                var data = new google.visualization.DataTable();
+                data.addColumn('string', 'Option');
+                data.addColumn('number', 'Votes');
+                for (var opt in poll.results) {
+                  data.addRow([opt, poll.results[opt]])
+                }
+                if (!chart) {
+                  chart = new google.visualization.PieChart(document.getElementById('chart'));
+                }
+                chart.draw(data, {is3D: true});
+              }
+            }
+          );
+          window.setTimeout(update, 1e3);
+        };
+        update();
+
+        $('#delete').click(function() {
+          if (confirm('Sure?')) {
+            $.ajax({
+              url: 'http://localhost:8080/' + poll + '?key=abc123',
+              type: 'DELETE'
+            })
+            .done(function() {
+              location.href = '/';
+            });
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

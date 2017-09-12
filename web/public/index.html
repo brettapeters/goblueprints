@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+  <title>Polls</title>
+</head>
+<body>
+  <div class="container">
+    <div class="col-md-4 offset-md-4">
+      <h1>Polls</h1>
+      <ul id="polls"></ul>
+      <a href="new.html" class="btn btn-primary">Create new poll</a>
+    </div>
+  </div>
+
+  <script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+
+  <script>
+    $(function() {
+      var update = function() {
+        $.getJSON('http://localhost:8080/polls/?key=abc123')
+        .done(function(polls) {
+          $('#polls').empty();
+          for (var p in polls) {
+            var poll = polls[p];
+            $('#polls').append(
+              $('<li>').append(
+                $('<a>')
+                  .attr('href', 'view.html?poll=polls/' + poll.id)
+                  .text(poll.title)
+              )
+            );
+          }
+        });
+        window.setTimeout(update, 1e4)
+      };
+      update();
+    });
+  </script>
+</body>
+</html>
